@@ -7,12 +7,20 @@
 SoftwareSerial ser(0, 1); // RX, TX
 int BluetoothData; // the data given from Computer
 
+//Pin connected to ST_CP of 74HC595
+int latchPin = 4;
+//Pin connected to SH_CP of 74HC595
+int clockPin = 5;
+////Pin connected to DS of 74HC595
+int dataPin = 3;
+
 //LCD variables
 const int rs = 12, en = 11, d4 = 8, d5 = 9, d6 = 10, d7 = 13;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
 //change to side numbers or colors later
-const int LEDpins[6] = {7,6,5,4,3,2};
+//const int LEDpins[6] = {7,6,5,4,3,2};
+const int LEDpins[6] = {};
 
 // sensor pins
 const int photoSensorPin0 = A0;
@@ -31,31 +39,45 @@ int photoSensor4Value = 0;
 int photoSensor5Value = 0;
 int photoSensors[6];
 
-
-
 //move variables
 int currentSideDown;
 int sidePossible[4] = {};
 int gameMoves[23] = {}; // to hold game moves 
 int playerMoves[100] = {}; // to hold the player moves
-
-//game variables
-int level = 1; //starting level, will increment with each success round
-int moveTime;
+int moveTime; // time the player has to move
 int winMovesCount;
 int gameLen = 0; // this lets you know home many moves the player must make, increment on loop
 
-//game states
+
+//game variables
+int level = 1; //starting level, will increment with each success round
 boolean waiting = true;
 boolean fail = false;
-boolean highScore = 0;
+boolean highScore = 0; // not implemented yet
 int score = 0;
-int needToBeValid = 50;
-                  
+int needToBeValid = 50; // loops needs to be a valid side down, needed to debounce the analog pin read
+
+// TODO: do not allow move across cube, as side down will not be able to be seen
 // hold the next possible move for game, this array is needed as due to the
 // hardware of the game we cannot make next move the side that is down (player would not see light
 // also do not want to have up side to repeat move.. therefor only the 4 sides can be valid next movesp
 void setup() {
+  // shift reg  setup
+  pinMode(latchPin, OUTPUT);
+  pinMode(dataPin, OUTPUT);  
+  pinMode(clockPin, OUTPUT);
+  //Binary notation as comment
+  //  dataArray[0] = 0xFF; //0b11111111
+  //  dataArray[1] = 0xFE; //0b11111110
+  //  dataArray[2] = 0xFC; //0b11111100
+  //  dataArray[3] = 0xF8; //0b11111000
+  //  dataArray[4] = 0xF0; //0b11110000
+  //  dataArray[5] = 0xE0; //0b11100000
+  //  dataArray[6] = 0xC0; //0b11000000
+  //  dataArray[7] = 0x80; //0b10000000
+  //  dataArray[8] = 0x00; //0b00000000
+  //  dataArray[9] = 0xE0; //0b11100000
+
   
   // random seed with annalog read to make game pattern more random
   // https://www.arduino.cc/reference/en/language/functions/random-numbers/randomseed/
@@ -66,14 +88,12 @@ void setup() {
   
   for (int i = 0; i < 6; i++) 
   {
-    pinMode(LEDpins[i], OUTPUT);
-    digitalWrite(LEDpins[i], LOW);
+    registerWrite(i, LOW);
   }  
   showWelcome();  
 }
 
-void loop() {
-  
+void loop() {  
   while(waiting){
     waitForMovement();
   }
@@ -87,6 +107,7 @@ void loop() {
     lcd.setCursor(0, 1);          
     lcd.print("Starting over.");     
     fail = false; 
+    
   }
   gameLen++;
   gameMoves[gameLen] = random(0,6); //and rondom 0-6 
@@ -100,9 +121,9 @@ void loop() {
    }
 
    // use this to restart game
-  if (gameMoves == 0)
+  if (gameLen == 0)
   {
-    gameMoves == 1;
+    gameLen == 1;
   }
   showGamePattern();
   playerPattern();
@@ -111,19 +132,22 @@ void loop() {
 void setGameStates(int level){
   if(level == 1)
   {
-    winMovesCount = 5;
+    winMovesCount = 2;
     moveTime = 400;
+    needToBeValid=50;
   }
   else if(level == 2)
   {
-    winMovesCount = 7;
+    winMovesCount = 3;
     moveTime = 100;
+    needToBeValid=40;
   }
   else if(level >= 3) // if play gets past 3 there is an incremental increase in dificult to the point that game is unwinnable
   //or an game move possition array breaks.
   {
-     winMovesCount += 2;
+     winMovesCount += 1;
      moveTime = 50;
+     needToBeValid = 30;
   }
 }
 
@@ -196,7 +220,7 @@ int getSideDown(int photoSensors[])
     if (currentPhotoSensorValue < prevPhotoSensorValue) {
       index = i;
     }
-  }
+  } // end for loop
 //  Serial.print("Lowest Reading: ");
 //  Serial.print(photoSensors[index]);
 //  Serial.print(" at Pin: ");
@@ -208,16 +232,16 @@ int getSideDown(int photoSensors[])
 void lightLED(int pin, int delayInterval){
   //int LEDpins[6] = {LEDpin1, LEDpin2, LEDpin3, LEDpin4, LEDpin5, LEDpin6};
   for (int i = 0; i < 6; i++) 
-  {
+  {    
     if (i == pin){
       //Serial.print("Turning Light On: ");
       //Serial.println(LEDpins[i]);
-      digitalWrite(LEDpins[i], HIGH);
+      registerWrite(i, HIGH);
       delay(delayInterval);
-      digitalWrite(LEDpins[i], LOW);
+      registerWrite(i, LOW);
     }
     else{
-      digitalWrite(LEDpins[i], LOW);
+      registerWrite(i, LOW);
     }
   } 
 }
@@ -229,29 +253,28 @@ void lightLEDCorrect(int pin){
     if (i == pin){
       //Serial.print("Turning Light On: ");
       //Serial.println(LEDpins[i]);
-      digitalWrite(LEDpins[i], HIGH);
+      registerWrite(i, HIGH);
       delay(1000);
-      digitalWrite(LEDpins[i], LOW);
+      registerWrite(i, LOW);
       delay(500);
-      digitalWrite(LEDpins[i], HIGH);
+      registerWrite(i, HIGH);
       delay(1000);
-      digitalWrite(LEDpins[i], LOW);
+      registerWrite(i, LOW);
       delay(500);
     }
     else{
-      digitalWrite(LEDpins[i], LOW);
+     registerWrite(i, LOW);
     }
   } 
 }
-
 
 void flashAll(int delay_time)
 {
   for(int i = 0;i<6;i++)
   { 
-    digitalWrite(LEDpins[i], HIGH);
+    registerWrite(i, HIGH);
     delay(delay_time);
-    digitalWrite(LEDpins[i], LOW);
+    registerWrite(i, LOW);
   }
 }
 
@@ -259,7 +282,7 @@ void waitForMovement(void)
 { 
   // store the current position so we can compare it later and notice a change.
   int prevSideDown = readValidPosition(); 
-  flashAll(50);
+  //flashAll(50);
   if(prevSideDown != readValidPosition()) 
   {
     delay(500); 
@@ -270,8 +293,8 @@ void waitForMovement(void)
 int readValidPosition()
 {
   int posArray[100]; // used to store position readings in a row. 
-  int validReading = 0;
-  int readingCount = 0;
+  int validReading = 0; // used to store the single read
+  int readingCount = 0; 
   //require 50 conesecutive same readings to say it is a valid reading
   for(int j = 0;j<needToBeValid;j++)
   {
@@ -285,7 +308,9 @@ int readValidPosition()
         break;
       }
     }
-    if(j == 0) validReading += 1; // the first reading is alway correct
+    if(j == 0) {
+      validReading += 1; // the first reading is alway correct
+    }
     else{
       // check new reading against previous, if it's the same, increment valid
       if(posArray[j] == posArray[j-1])
@@ -304,7 +329,7 @@ int readValidPosition()
     ser.print("Side down: ");
     ser.println(currentSideDown); 
     return currentSideDown; 
-  }
+  } //end if 
      
                                                              
 }
@@ -321,7 +346,7 @@ void playerPattern()
     int timeout = 0;
     int wrong = 0;
     //int validSide = readValidPosition();
-    while(timeout<5)
+    while(timeout<15)
     {
       // get side down
       int validSide = readValidPosition();
@@ -338,10 +363,13 @@ void playerPattern()
         }
         
       //how long have they been trying (or thinking), is it time to timeout?
-      else if ((timeout == 4)) 
+      else if ((timeout == 49)) 
       {
         //Serial.print("Timed out on position ");
         //Serial.println(i);
+        lcd.clear();
+        lcd.setCursor(0, 0);  
+        lcd.print("TIMED OUT!");
         waiting = true;
         gameLen = 0; // this gets us out of listen_for_pattern()
         level = 1;
@@ -350,7 +378,10 @@ void playerPattern()
       }
        
       //did not move side yet
-      else if(validSide == gameMoves[i-1]); 
+      else if(validSide == gameMoves[i-1])
+      {
+         timeout += 1;
+      }
       
       //wrong move
       else if(validSide != gameMoves[i]) 
@@ -359,7 +390,7 @@ void playerPattern()
       }
                                                                             
       // on wrong for too long
-      if(wrong > 5) 
+      if(wrong > 3) 
       {
         ser.print("wrong: ");
         ser.println(validSide);
@@ -432,28 +463,36 @@ void showGamePattern()
     delay(2000); // TODO THIS NEEDS TO BE A VARIABLE TO CHANGE WHEN DIFF INCREASES
   }
 
-  startScreen();
+  //startScreen();
   
   // print a new line, this helps keep the debug serial window more legible
   ser.println(" "); 
 }
 
-//BLUETOOTH COMS
-//void writeTo(byte device, byte toAddress, byte val) {
-//  Wire.beginTransmission(device);
-//  Wire.write(toAddress);
-//  Wire.write(val);
-//  Wire.endTransmission();
-//}
-//
-//void readFrom(byte device, byte fromAddress, int num, byte result[]) {
-//  Wire.beginTransmission(device);
-//  Wire.write(fromAddress);
-//  Wire.endTransmission();
-//  Wire.requestFrom((int)device, num);
-//  int i = 0;
-//  while (Wire.available()) {
-//    result[i] = Wire.read();
-//    i++;
-//  }
-//}
+// This method sends bits to the shift register:
+// https://www.arduino.cc/en/Tutorial/ShftOut12
+
+void registerWrite(int whichPin, int whichState) {
+// the bits you want to send
+  byte bitsToSend = 0;
+  // ASCII '0' through '9' characters are
+  // represented by the values 48 through 57.
+  // so if the user types a number from 0 through 9 in ASCII, 
+  // you can subtract 48 to get the actual value:
+  int bitToSet = whichPin - 48;
+
+  // turn off the output so the pins don't light up
+  // while you're shifting bits:
+  digitalWrite(latchPin, LOW);
+
+  // turn on the next highest bit in bitsToSend:
+  bitWrite(bitsToSend, whichPin, whichState);
+
+  // shift the bits out:
+  shiftOut(dataPin, clockPin, MSBFIRST, bitsToSend);
+
+    // turn on the output so the LEDs can light up:
+  digitalWrite(latchPin, HIGH);
+
+}
+
