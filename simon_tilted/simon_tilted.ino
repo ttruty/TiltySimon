@@ -51,6 +51,7 @@ int gameMoves[50] = {}; // to hold game moves
 int playerMoves[100] = {}; // to hold the player moves
 int moveTime; // time the player has to move
 int winMovesCount;
+int gameDelay;
 int gameLen = 0; // this lets you know home many moves the player must make, increment on loop
 
 
@@ -138,15 +139,17 @@ void setGameStates(int level){
   {
     winMovesCount = 4;
     moveTime = 300;
-    needToBeValid=30;
+    needToBeValid=25;
     moveScore = 10;
+    gameDelay = 1500;
   } // end if
   else if(level == 3)
   {
     winMovesCount = 7;
     moveTime = 100;
-    needToBeValid=20;
+    needToBeValid=15;
     moveScore = 20;
+    gameDelay = 1000;
   } // end else if
   else if(level >= 5) // if play gets past 3 there is an incremental increase in dificult to the point that game is unwinnable
   //or an game move possition array breaks.
@@ -155,6 +158,7 @@ void setGameStates(int level){
      moveTime = 50;
      needToBeValid = 10;
      moveScore = 50;
+     gameDelay = 500;
   } // end else if
 } // end setGameStates
 
@@ -476,6 +480,7 @@ void playerPattern()
      // Check to see gameLen = winMoves
      if(gameLen == winMovesCount)
      { 
+        
       
         lcd.clear();
         lcd.setCursor(0, 0);           
@@ -502,8 +507,6 @@ void playerPattern()
        delay(5000);
      } // end if for player level complete condition 
      else{
-
-      score += moveScore;
       
        lcd.clear();
        lcd.setCursor(0, 0);           
@@ -572,11 +575,11 @@ void showGamePattern()
     ser.print(",");
     
     lightLED(gameMoves[i], 500);
-    tone(tonePin, melody[gameMoves[i]],1000);
+    tone(tonePin, melody[gameMoves[i]], 500);
     delay(1000);
     noTone(tonePin);
     
-    delay(2000); // TODO THIS NEEDS TO BE A VARIABLE TO CHANGE WHEN DIFF INCREASES
+    delay(gameDelay); // TODO THIS NEEDS TO BE A VARIABLE TO CHANGE WHEN DIFF INCREASES
   } // end for loop
     
   // print a new line, this helps keep the debug serial window more legible
