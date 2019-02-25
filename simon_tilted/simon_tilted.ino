@@ -137,17 +137,17 @@ void loop() {
 void setGameStates(int level){
   if(level == 1)
   {
-    winMovesCount = 4;
+    winMovesCount = 3;
     moveTime = 300;
-    needToBeValid=25;
+    needToBeValid=30;
     moveScore = 10;
     gameDelay = 1500;
   } // end if
   else if(level == 3)
   {
-    winMovesCount = 7;
+    winMovesCount = 5;
     moveTime = 100;
-    needToBeValid=15;
+    needToBeValid=20;
     moveScore = 20;
     gameDelay = 1000;
   } // end else if
@@ -546,6 +546,7 @@ void failState()
     flashAll(50);
   } //end for loop
   delay(2000);
+  score = 0;
 } //end failState
 
 void showScore(int score){
