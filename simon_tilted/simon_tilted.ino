@@ -42,7 +42,8 @@ int photoSensors[6];
 //tone varialbles
 //https://www.arduino.cc/en/Tutorial/ToneMelody?from=Tutorial.Tone
 const int tonePin = 6;
-int melody[] = {NOTE_C8, NOTE_E6, NOTE_F6, NOTE_G6, NOTE_A6, NOTE_B6, NOTE_C7, NOTE_D7};
+int melody[] = {NOTE_C8, NOTE_E6, NOTE_F6, NOTE_G6, NOTE_A6, NOTE_B4, NOTE_C5, NOTE_D5};
+
 
 //move variables
 int currentSideDown;
@@ -69,6 +70,7 @@ int needToBeValid = 50; // loops needs to be a valid side down, needed to deboun
 // hardware of the game we cannot make next move the side that is down (player would not see light
 // also do not want to have up side to repeat move.. therefor only the 4 sides can be valid next movesp
 void setup() {
+  //easterEgg2();
   // shift reg  setup
   pinMode(latchPin, OUTPUT);
   pinMode(dataPin, OUTPUT);  
@@ -99,6 +101,7 @@ void setup() {
 void loop() {  
   while(waiting){
     waitForMovement();
+    
   } // end while loop
 
   setGameStates(level);
@@ -141,24 +144,24 @@ void setGameStates(int level){
     moveTime = 300;
     needToBeValid=30;
     moveScore = 10;
-    gameDelay = 1500;
+    gameDelay = 600;
   } // end if
-  else if(level == 3)
+  else if(level == 2)
   {
     winMovesCount = 5;
     moveTime = 100;
     needToBeValid=20;
     moveScore = 20;
-    gameDelay = 1000;
+    gameDelay = 400;
   } // end else if
-  else if(level >= 5) // if play gets past 3 there is an incremental increase in dificult to the point that game is unwinnable
+  else if(level >= 3) // if play gets past 3 there is an incremental increase in dificult to the point that game is unwinnable
   //or an game move possition array breaks.
   {
      winMovesCount += 1;
      moveTime = 50;
      needToBeValid = 10;
      moveScore = 50;
-     gameDelay = 500;
+     gameDelay -= 50; //will keep decreasing until unwinnable HAHAHAHA
   } // end else if
 } // end setGameStates
 
@@ -207,7 +210,7 @@ void startScreen()
   lcd.clear();
   lcd.setCursor(0, 0);           
   lcd.print("Follow This!");
-  delay(2500);
+  delay(2000);
 } // end startScreen
 
 int readSensors(){
@@ -328,6 +331,8 @@ void waitForMovement(void)
 
 int readValidPosition()
 {
+  // the "side down" must me a min number of readings for it to fire a valid side down
+  // the needsToBeValid will change as difficulty increases
   int posArray[100]; // used to store position readings in a row. 
   int validReading = 0; // used to store the single read
   int readingCount = 0; 
@@ -478,9 +483,8 @@ void playerPattern()
      
      delay(250);
      // Check to see gameLen = winMoves
-     if(gameLen == winMovesCount)
-     { 
-        
+     if(gameLen == winMovesCount) //LEVEL complete
+     {       
       
         lcd.clear();
         lcd.setCursor(0, 0);           
@@ -498,13 +502,13 @@ void playerPattern()
         tone(tonePin, NOTE_C5,800);
        delay(400);
        noTone(tonePin);
-       delay(2000); // delay to give the player time to be ready for playback
+       delay(1000); // delay to give the player time to be ready for playback
         
        // complete level!!
        gameLen = 0; // this gets out 
        level += 1; // go to next level
 
-       delay(5000);
+       delay(2500);
      } // end if for player level complete condition 
      else{
       
@@ -533,7 +537,17 @@ void failState()
  noTone(tonePin);
  delay(2000);
 
+ if (score > 100)
+ {
+  easterEgg();
+ }
+ else {
+  easterEgg2();
+ }
+ 
  showScore(score);
+
+ 
 
   delay(5000);
   lcd.clear();
@@ -565,19 +579,17 @@ void showGamePattern()
   lcd.setCursor(0, 0);  
   lcd.print("GAME PATTERN: ");
   
-  
   for(int i=1;i<=gameLen;i++) 
   {
-    //Serial.print(gameMoves[i]); // debug
-    //Serial.print(","); // debug
     lcd.setCursor(i-1, 1); 
     lcd.print(gameMoves[i]);
+    
     ser.print(gameMoves[i]);
     ser.print(",");
     
     lightLED(gameMoves[i], 500);
     tone(tonePin, melody[gameMoves[i]], 500);
-    delay(1000);
+    delay(100);
     noTone(tonePin);
     
     delay(gameDelay); // TODO THIS NEEDS TO BE A VARIABLE TO CHANGE WHEN DIFF INCREASES
@@ -612,3 +624,66 @@ void registerWrite(int whichPin, int whichState) {
   digitalWrite(latchPin, HIGH);
 
 } // end registerWrite
+
+void easterEgg(){
+  // plays indiana jones theme song 
+  //EFGC DEF GABF AABCDE EFGC DEF GABF AABCDE EFGC DEF GGED GED GED GFEDC
+  tone(tonePin, NOTE_E4,800);
+  delay(200);
+  tone(tonePin, NOTE_F4,800);
+  delay(200);
+  tone(tonePin, NOTE_G4,800);
+  delay(400);
+  tone(tonePin, NOTE_C5,1600);
+  delay(600);
+  tone(tonePin, NOTE_D4,800);
+  delay(200);
+  tone(tonePin, NOTE_E4,800);
+  delay(200);
+  tone(tonePin, NOTE_F4,1600);
+  delay(1500);
+
+  tone(tonePin, NOTE_G4,800);
+  delay(200);
+  tone(tonePin, NOTE_A4,800);
+  delay(200);
+  tone(tonePin, NOTE_B4,800);
+  delay(400);
+  tone(tonePin, NOTE_F5,1600);
+  delay(1500);
+
+  tone(tonePin, NOTE_B4,800);
+  delay(600);
+  tone(tonePin, NOTE_C4,800);
+  delay(600);
+  tone(tonePin, NOTE_D5,800);
+  delay(600);
+  tone(tonePin, NOTE_E5,1600);
+  delay(3000);
+  
+}
+
+void easterEgg2()
+{
+  // imperial march
+  tone(tonePin, NOTE_A3, 500);
+  delay(500);
+  tone(tonePin, NOTE_A3, 500);
+  delay(500);
+  tone(tonePin, NOTE_A3, 500);
+  delay(500);
+  tone(tonePin, NOTE_F3, 350);
+  delay(350);
+  tone(tonePin, NOTE_CS3, 150);
+  delay(150);
+  tone(tonePin, NOTE_A3, 500);
+  delay(500);
+  tone(tonePin, NOTE_F3, 350);
+  delay(350);
+  tone(tonePin, NOTE_CS3, 150);
+  delay(150);
+  tone(tonePin, NOTE_A3, 650);
+  delay(650);
+
+}
+
