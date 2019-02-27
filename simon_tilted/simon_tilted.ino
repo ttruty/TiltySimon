@@ -141,27 +141,39 @@ void setGameStates(int level){
   if(level == 1)
   {
     winMovesCount = 3;
-    moveTime = 300;
-    needToBeValid=30;
+    moveTime = 100;
+    needToBeValid=25;
     moveScore = 10;
-    gameDelay = 600;
+    gameDelay = 400;
   } // end if
   else if(level == 2)
   {
+    //gameLen = 3;
     winMovesCount = 5;
-    moveTime = 100;
+    moveTime = 75;
     needToBeValid=20;
     moveScore = 20;
-    gameDelay = 400;
+    gameDelay = 300;
   } // end else if
-  else if(level >= 3) // if play gets past 3 there is an incremental increase in dificult to the point that game is unwinnable
+  else if(level = 3) 
+  {
+     //gameLen = 5;
+     winMovesCount = 7;
+     moveTime = 50;
+     needToBeValid = 12;
+     moveScore = 100;
+     gameDelay = 100;
+  } // end else if
+
+  else if(level > 3) // if play gets past 3 there is an incremental increase in dificult to the point that game is unwinnable
   //or an game move possition array breaks.
   {
+     //gameLen = 7;
      winMovesCount += 1;
-     moveTime = 50;
+     moveTime = 25;
      needToBeValid = 10;
-     moveScore = 50;
-     gameDelay -= 50; //will keep decreasing until unwinnable HAHAHAHA
+     moveScore = 100;
+     gameDelay -= 5; //will keep decreasing until unwinnable HAHAHAHA
   } // end else if
 } // end setGameStates
 
@@ -176,7 +188,7 @@ void showWelcome()
   for (int i = 0; i < 10; i++){
     flashAll(50);
   } //end for loop
-  delay(2000);
+  delay(1500);
   
   lcd.clear();
   lcd.setCursor(0, 0);           
@@ -186,7 +198,7 @@ void showWelcome()
   for (int i = 0; i < 10; i++){
     flashAll(50);
   } //end for loop
-  delay(2000);
+  delay(1500);
 
    lcd.clear();
   lcd.setCursor(0, 0);           
@@ -196,7 +208,7 @@ void showWelcome()
   for (int i = 0; i < 10; i++){
     flashAll(50);
   } //end for loop
-  delay(2000);
+  delay(1500);
   
   lcd.clear();
   lcd.setCursor(0, 0);           
@@ -210,7 +222,7 @@ void startScreen()
   lcd.clear();
   lcd.setCursor(0, 0);           
   lcd.print("Follow This!");
-  delay(2000);
+  delay(1500);
 } // end startScreen
 
 int readSensors(){
@@ -260,21 +272,20 @@ int getSideDown(int photoSensors[])
       index = i;
     } // end if
   } // end for loop
-//  Serial.print("Lowest Reading: ");
-//  Serial.print(photoSensors[index]);
-//  Serial.print(" at Pin: ");
-//  Serial.println(index);
+//  Serial.print("Lowest Reading: "); // debug
+//  Serial.print(photoSensors[index]); // debug
+//  Serial.print(" at Pin: "); //edbug
+//  Serial.println(index); //debug
   lightLED(index, 70);
   return index;
 } // end getSideDown
 
 void lightLED(int pin, int delayInterval){
-  //int LEDpins[6] = {LEDpin1, LEDpin2, LEDpin3, LEDpin4, LEDpin5, LEDpin6};
   for (int i = 0; i < 6; i++) 
   {    
     if (i == pin){
-      //Serial.print("Turning Light On: ");
-      //Serial.println(LEDpins[i]);
+      //Serial.print("Turning Light On: "); //debug
+      //Serial.println(LEDpins[i]); //debug
       registerWrite(i, HIGH);
       delay(delayInterval);
       registerWrite(i, LOW);
@@ -293,13 +304,13 @@ void lightLEDCorrect(int pin){
       //Serial.print("Turning Light On: ");
       //Serial.println(LEDpins[i]);
       registerWrite(i, HIGH);
-      delay(1000);
-      registerWrite(i, LOW);
       delay(500);
+      registerWrite(i, LOW);
+      delay(250);
       registerWrite(i, HIGH);
-      delay(1000);
-      registerWrite(i, LOW);
       delay(500);
+      registerWrite(i, LOW);
+      delay(250);
     } // end if
     else{
      registerWrite(i, LOW);
@@ -404,13 +415,22 @@ void playerPattern()
       // correct move?
       if(validSide == gameMoves[i]) 
         {
-          // Blink current position once to indicate they did it correctly
-          score += moveScore;
-          lightLEDCorrect(validSide);
-          lcd.setCursor(i, 1);          
-          lcd.print(validSide);
+          // lcd show
+          lcd.clear();
+          lcd.setCursor(0, 1);
+          lcd.print(convertToSideName(validSide));
           ser.print(validSide);
-          break;
+          
+          score += moveScore;
+
+          //correct move tone
+          tone(tonePin, melody[validSide], 500);
+          delay(100);
+          noTone(tonePin);
+
+          // Blink indicate correct
+          lightLEDCorrect(validSide);
+          break;                    
         } // end if
         
       // timeout?
@@ -421,9 +441,9 @@ void playerPattern()
         lcd.clear();
         lcd.setCursor(0, 0);  
         lcd.print("TIMED OUT!");
-        delay(5000);
+        delay(2000);
         waiting = true;
-        gameLen = 0; // this gets us out of listen_for_pattern()
+        gameLen = 0;
         level = 1;
         fail = true;
 
@@ -451,18 +471,16 @@ void playerPattern()
       if(wrong >  2) 
       {
         ser.print("wrong: ");
-        ser.println(validSide);
+        ser.println(convertToSideName(gameMoves[i]));
         
         lcd.clear();
         lcd.setCursor(0, 0);           
         lcd.print("Wrong Move: ");
         lcd.setCursor(0, 1);          
-        lcd.print(validSide);     
-        
+        lcd.print(convertToSideName(gameMoves[i]));     
+        delay(100);
         // Blink quickly to show the incorrect tilt position
         flashAll(50);
-        // Blink where the player should have rolled to
-        delay(10);
                 
         gameLen = 0; //end game
         level = 1; 
@@ -470,7 +488,6 @@ void playerPattern()
         waiting = true;
        
         failState();
-        
         break;
       } // end if
       timeout += 1;   // Increment timeout
@@ -492,7 +509,8 @@ void playerPattern()
         lcd.setCursor(0, 1);          
         lcd.print("Next Level: ");  
         lcd.print(level + 1);  
-        
+
+        //complete level song
         tone(tonePin, NOTE_E4,800);
        delay(200);
        tone(tonePin, NOTE_F4,800);
@@ -505,18 +523,19 @@ void playerPattern()
        delay(1000); // delay to give the player time to be ready for playback
         
        // complete level!!
-       gameLen = 0; // this gets out 
        level += 1; // go to next level
-
        delay(2500);
      } // end if for player level complete condition 
      else{
-      
+
+      // lcd control
        lcd.clear();
        lcd.setCursor(0, 0);           
        lcd.print("Correct!");
        lcd.setCursor(0, 1);          
        lcd.print("Adding more");
+
+       //correct tone
        tone(tonePin, NOTE_E4,800);
        delay(250);
        tone(tonePin, NOTE_F4,800);
@@ -530,7 +549,7 @@ void playerPattern()
 
 void failState()
 {
-  tone(tonePin, NOTE_F2,800);
+ tone(tonePin, NOTE_F2,800);
  delay(500);
  tone(tonePin, NOTE_G2,800);
  delay(500);
@@ -546,9 +565,7 @@ void failState()
  }
  
  showScore(score);
-
  
-
   delay(5000);
   lcd.clear();
   lcd.setCursor(0, 0);           
@@ -581,8 +598,9 @@ void showGamePattern()
   
   for(int i=1;i<=gameLen;i++) 
   {
-    lcd.setCursor(i-1, 1); 
-    lcd.print(gameMoves[i]);
+    lcd.clear();
+    lcd.setCursor(0, 1);
+    lcd.print(convertToSideName(gameMoves[i]));
     
     ser.print(gameMoves[i]);
     ser.print(",");
@@ -592,12 +610,49 @@ void showGamePattern()
     delay(100);
     noTone(tonePin);
     
-    delay(gameDelay); // TODO THIS NEEDS TO BE A VARIABLE TO CHANGE WHEN DIFF INCREASES
+    delay(gameDelay); // change game delay with difficulty increases
   } // end for loop
     
   // print a new line, this helps keep the debug serial window more legible
   ser.println(" "); 
 } // end showGamePattern
+
+String convertToSideName(int sideNum){
+  // convert the side number to a readable side, this could also be used to convert to colors if I had all diff colored LEDS
+  switch(sideNum)
+  {
+    case 0:
+    {
+      return "Top";
+      break;
+    } // end case 0
+    case 1:
+    {
+      return "Left";
+      break;
+    } // end case 1
+    case 2:
+    {
+      return "Back";
+      break;
+    } // end case 2
+    case 3:
+    {
+      return "Bottom";
+      break;
+    } // end case 3
+    case 4:
+    {
+      return "Front";
+      break;
+    } // end case 4
+    case 5:
+    {
+      return "Right";
+      break;
+    } // end case 5    
+  }// end switch
+} // end convertToSideNam
 
 // This method sends bits to the shift register:
 // https://www.arduino.cc/en/Tutorial/ShftOut12
@@ -652,14 +707,16 @@ void easterEgg(){
   tone(tonePin, NOTE_F5,1600);
   delay(1500);
 
+  tone(tonePin, NOTE_A4,800);
+  delay(200);
   tone(tonePin, NOTE_B4,800);
-  delay(600);
+  delay(400);
   tone(tonePin, NOTE_C4,800);
-  delay(600);
+  delay(200);
   tone(tonePin, NOTE_D5,800);
-  delay(600);
-  tone(tonePin, NOTE_E5,1600);
-  delay(3000);
+  delay(400);
+  tone(tonePin, NOTE_E5,1200);
+  delay(1000);
   
 }
 
@@ -684,6 +741,4 @@ void easterEgg2()
   delay(150);
   tone(tonePin, NOTE_A3, 650);
   delay(650);
-
 }
-
